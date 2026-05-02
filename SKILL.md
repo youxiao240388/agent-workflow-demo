@@ -177,10 +177,10 @@ Financial amounts and personal information are sanitized locally before entering
 
 Online interactive demos (PPT-style, ← → keys to navigate):
 
-- **Architecture Overview (10 slides):** [Live Demo](https://youxiao240388.github.io/agent-workflow-demo/assets/demos/index.html)
-- **Invoice Pipeline (5 slides):** [Live Demo](https://youxiao240388.github.io/agent-workflow-demo/assets/demos/workflow_01.html)
-- **Web Extraction (5 slides):** [Live Demo](https://youxiao240388.github.io/agent-workflow-demo/assets/demos/workflow_02.html)
-- **Knowledge Distillation (6 slides):** [Live Demo](https://youxiao240388.github.io/agent-workflow-demo/assets/demos/workflow_03.html)
+- **Architecture Overview (10 slides):** [Live Demo](https://youxiao240388.github.io/agent-workflow/assets/demos/index.html)
+- **Invoice Pipeline (5 slides):** [Live Demo](https://youxiao240388.github.io/agent-workflow/assets/demos/workflow_01.html)
+- **Web Extraction (5 slides):** [Live Demo](https://youxiao240388.github.io/agent-workflow/assets/demos/workflow_02.html)
+- **Knowledge Distillation (6 slides):** [Live Demo](https://youxiao240388.github.io/agent-workflow/assets/demos/workflow_03.html)
 
 ## Common Pitfalls
 
