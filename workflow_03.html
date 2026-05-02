@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>工作流03 — 群聊知识蒸馏</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#020617;--surface:#0f172a;--border:#1e293b;--text:#f1f5f9;--muted:#94a3b8;--dim:#475569;--cyan:#22d3ee;--emerald:#34d399;--violet:#a78bfa;--amber:#fbbf24;--rose:#fb7185;--orange:#fb923c}
+body{font-family:'Noto Sans SC','JetBrains Mono',monospace;background:var(--bg);min-height:100vh;overflow:hidden;color:var(--text)}
+.loading{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1.5rem;transition:opacity .6s,visibility .6s}
+.loading.hidden{opacity:0;visibility:hidden}
+.loading-spinner{width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--rose);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{color:var(--muted);font-size:.875rem;letter-spacing:.2em}
+.slides{width:100vw;height:100vh;position:relative}
+.slide{position:absolute;inset:0;display:none;padding:2.5rem 4rem;flex-direction:column;justify-content:center;opacity:0;transition:opacity .4s}
+.slide.active{display:flex;opacity:1}
+.cover{align-items:center;text-align:center;gap:1.5rem}
+.pulse-ring{width:60px;height:60px;border-radius:50%;background:radial-gradient(circle,rgba(251,113,133,.2) 0%,transparent 70%);display:flex;align-items:center;justify-content:center;animation:pulse-ring 2s ease-in-out infinite}
+@keyframes pulse-ring{0%,100%{transform:scale(1);opacity:.6}50%{transform:scale(1.15);opacity:1}}
+.pulse-dot{width:16px;height:16px;background:var(--rose);border-radius:50%;box-shadow:0 0 20px rgba(251,113,133,.5)}
+.cover h1{font-size:2rem;font-weight:900}
+.cover .accent{color:var(--rose)}
+.cover .tagline{color:var(--muted);font-size:1rem;font-weight:300}
+.content-slide{gap:1.25rem}
+.section-title{display:flex;align-items:center;gap:.75rem;margin-bottom:.25rem}
+.section-title .dot{width:10px;height:10px;border-radius:50%}
+.content-slide h2{font-size:1.4rem;font-weight:700}
+.desc{color:var(--muted);font-size:.9rem;line-height:1.7;max-width:900px}
+.an{opacity:0;transform:translateY(20px)}
+.an.visible{animation:fadeSlideUp .5s ease-out forwards}
+@keyframes fadeSlideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.cards{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;margin-top:.5rem}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:.75rem;padding:1.25rem;transition:transform .3s,box-shadow .3s}
+.card:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(0,0,0,.4)}
+.card-top{display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem}
+.card h3{font-size:.9rem;font-weight:600}
+.card p,.card li{color:var(--muted);font-size:.8rem;line-height:1.6}
+.card ul{list-style:none}
+.card li::before{content:'› ';color:var(--dim)}
+
+/* Timeline */
+.timeline{margin-top:.75rem;display:flex;flex-direction:column;gap:.75rem}
+.tl-item{display:flex;gap:1rem;align-items:flex-start}
+.tl-marker{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700}
+.tl-content h4{font-size:.9rem;font-weight:600;margin-bottom:.15rem}
+.tl-content p{color:var(--muted);font-size:.8rem;line-height:1.5}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-top:.75rem}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:.75rem;padding:1.25rem;text-align:center}
+.stat-card .number{font-size:1.8rem;font-weight:900}
+.stat-card .label{color:var(--muted);font-size:.75rem;margin-top:.25rem}
+
+/* Highlight */
+.hl-box{background:linear-gradient(135deg,rgba(251,113,133,.06),rgba(168,85,247,.06));border:1px solid rgba(251,113,133,.15);border-radius:.75rem;padding:1rem 1.5rem;margin-top:.5rem}
+.hl-box .title{color:var(--rose);font-weight:600;font-size:.85rem;margin-bottom:.35rem}
+.hl-box .text{color:var(--muted);font-size:.85rem;line-height:1.7}
+
+.nav{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:1rem;z-index:100}
+.nav button{background:var(--surface);border:1px solid var(--border);color:var(--text);width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.nav button:hover{border-color:var(--rose);color:var(--rose);box-shadow:0 0 12px rgba(251,113,133,.2)}
+.nav button:disabled{opacity:.3;cursor:default}
+.nav button:disabled:hover{border-color:var(--border);color:var(--text);box-shadow:none}
+.progress-dots{display:flex;gap:.4rem}
+.progress-dot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:all .3s;cursor:pointer}
+.progress-dot.active{background:var(--rose);width:24px;border-radius:4px}
+.page-indicator{position:fixed;top:2rem;right:3rem;z-index:100;color:var(--dim);font-size:.8rem;font-family:'JetBrains Mono',monospace}
+.key-hint{position:fixed;bottom:5.5rem;left:50%;transform:translateX(-50%);z-index:100;color:var(--dim);font-size:.7rem;pointer-events:none;opacity:.6}
+
+/* Message flow animation */
+@keyframes msgFlow{0%{opacity:.3;transform:translateY(-10px)}50%{opacity:1;transform:translateY(0)}100%{opacity:.3;transform:translateY(10px)}}
+.msg-bubble{background:var(--surface);border:1px solid var(--border);border-radius:.5rem;padding:.5rem .75rem;font-size:.75rem;color:var(--muted);max-width:280px;margin-bottom:.4rem}
+.msg-bubble:nth-child(odd){margin-left:auto;text-align:right;border-color:rgba(251,113,133,.2)}
+.msg-bubble:nth-child(even){margin-right:auto}
+.msg-stream{max-height:120px;overflow:hidden;position:relative;margin:1rem 0;padding:0 1rem}
+.msg-stream::after{content:'';position:absolute;bottom:0;left:0;right:0;height:40px;background:linear-gradient(transparent,var(--bg))}
+
+@media(max-width:768px){.slide{padding:1.5rem}.cards{grid-template-columns:1fr}.stats{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="loading" id="loading"><div class="loading-spinner"></div><div class="loading-text">K N O W L E D G E &nbsp; E N G I N E</div></div>
+<div class="page-indicator" id="pageIndicator">01 / 06</div>
+<div class="key-hint">← → 键 / 滚轮 / 点击切换</div>
+<div class="slides" id="slides">
+
+  <div class="slide cover active" data-index="0">
+    <div class="pulse-ring an"><div class="pulse-dot"></div></div>
+    <h1 class="an">工作流<span class="accent">03</span></h1>
+    <p class="tagline an">群聊知识蒸馏 · Knowledge Distillation Engine</p>
+    <p class="tagline an" style="color:var(--dim);">把"用后即焚"变为可检索、可追溯、可复用的组织神经中枢</p>
+  </div>
+
+  <div class="slide content-slide" data-index="1">
+    <div class="section-title an"><div class="dot" style="background:var(--rose)"></div><h2>模拟消息流 · 实时接入</h2></div>
+    <div class="msg-stream an">
+      <div class="msg-bubble">刚才那个接口超时，是网关层超时设置太小了</div>
+      <div class="msg-bubble">我们之前遇到过一次，改了 nginx proxy_read_timeout 到 300s 就好了</div>
+      <div class="msg-bubble">对，上次我还加了 retry 逻辑，避免偶发的网络抖动</div>
+      <div class="msg-bubble">这个方案我记录一下，下次可以复用</div>
+      <div class="msg-bubble">还有个坑，如果是 upstream 超时，得改 proxy_connect_timeout</div>
+      <div class="msg-bubble">记得检查一下 upstream 的健康检查配置</div>
+    </div>
+    <p class="desc an">↓ 这些高价值讨论，正常情况下 5 分钟后就被新消息淹没</p>
+  </div>
+
+  <div class="slide content-slide" data-index="2">
+    <div class="section-title an"><div class="dot" style="background:var(--rose)"></div><h2>蒸馏四阶段</h2></div>
+    <div class="timeline">
+      <div class="tl-item an"><div class="tl-marker" style="background:rgba(251,113,133,.12);color:var(--rose);">1</div><div class="tl-content"><h4>语义聚类切分</h4><p>通过语义聚类算法识别讨论边界，将散乱的消息按事件/工单维度切分成独立知识单元。不再是按时间切——按语义切。</p></div></div>
+      <div class="tl-item an"><div class="tl-marker" style="background:rgba(251,113,133,.12);color:var(--rose);">2</div><div class="tl-content"><h4>去噪 + 摘要</h4><p>自动去除表情、寒暄、重复消息、"收到"、"好的"等无信息量内容，提取核心讨论内容并生成结构化摘要。</p></div></div>
+      <div class="tl-item an"><div class="tl-marker" style="background:rgba(251,113,133,.12);color:var(--rose);">3</div><div class="tl-content"><h4>结构化改写 + 归档</h4><p>将摘要改写为标准化知识条目：问题描述→根因分析→解决方案→注意事项→来源会话，自动写入组织知识库。</p></div></div>
+      <div class="tl-item an"><div class="tl-marker" style="background:rgba(251,113,133,.12);color:var(--rose);">4</div><div class="tl-content"><h4>月度全量回溯</h4><p>利用长上下文窗口回朔一周甚至一个月的全量历史，提取跨事件关联模式——哪些问题反复出现、决策链路有没有系统性缺陷。</p></div></div>
+    </div>
+  </div>
+
+  <div class="slide content-slide" data-index="3">
+    <div class="section-title an"><div class="dot" style="background:var(--violet)"></div><h2>蒸馏示例 · 故障排查</h2></div>
+    <div class="hl-box an">
+      <div class="title">📋 知识条目 #KF-2026-0428-003</div>
+      <div class="text">
+        <strong>问题：</strong>API 网关间歇性 504 超时<br>
+        <strong>根因：</strong>nginx proxy_read_timeout 默认 60s 不足<br>
+        <strong>方案：</strong>proxy_read_timeout 改为 300s + upstream 健康检查<br>
+        <strong>补充：</strong>如涉及 upstream 超时需同步调整 proxy_connect_timeout<br>
+        <strong>来源：</strong>#运维群 2026-04-28 14:22-14:35<br>
+        <strong>标签：</strong>nginx / 超时 / 网关 / 故障排查
+      </div>
+    </div>
+    <p class="desc an" style="margin-top:.5rem;">↑ 从 6 条零散聊天消息中自动提取生成的标准化知识条目</p>
+  </div>
+
+  <div class="slide content-slide" data-index="4">
+    <div class="section-title an"><div class="dot" style="background:var(--violet)"></div><h2>月度复盘报告</h2></div>
+    <div class="cards">
+      <div class="card an"><div class="card-top"><i data-lucide="trending-up" style="color:var(--rose);width:18px;height:18px;"></i><h3>高频问题识别</h3></div><p>哪些故障反复出现？是否有系统性缺陷未解决？自动生成 Top N 热点问题。</p></div>
+      <div class="card an"><div class="card-top"><i data-lucide="git-branch" style="color:var(--rose);width:18px;height:18px;"></i><h3>决策链路分析</h3></div><p>方案决策过程中走了哪些弯路？哪些讨论最终被推翻？识别低效决策模式。</p></div>
+      <div class="card an"><div class="card-top"><i data-lucide="check-circle-2" style="color:var(--emerald);width:18px;height:18px;"></i><h3>有效方案沉淀</h3></div><p>哪些方案在多次实践中被验证有效？自动标记"已验证方案"并提升检索权重。</p></div>
+      <div class="card an"><div class="card-top"><i data-lucide="users" style="color:var(--violet);width:18px;height:18px;"></i><h3>新人入职加速</h3></div><p>告别口口相传。新人自主检索历史知识库，快速获取团队踩过的坑和最佳实践。</p></div>
+    </div>
+  </div>
+
+  <div class="slide cover" data-index="5">
+    <div class="pulse-ring an"><div class="pulse-dot" style="background:var(--rose);box-shadow:0 0 20px rgba(251,113,133,.5);"></div></div>
+    <h1 class="an" style="font-size:1.8rem;">核心<span style="color:var(--rose);">价值</span></h1>
+    <div class="stats an" style="grid-template-columns:repeat(2,1fr);max-width:500px;">
+      <div class="stat-card"><div class="number" style="color:var(--rose);">10+</div><div class="label">日均知识条目产出</div></div>
+      <div class="stat-card"><div class="number" style="color:var(--emerald);">0→有效</div><div class="label">历史沉淀率提升</div></div>
+    </div>
+    <p class="desc an" style="text-align:center;margin-top:1rem;">
+      <strong style="color:var(--rose);">用后即焚</strong> 的群聊 → <strong style="color:var(--emerald);">可检索、可追溯、可复用</strong> 的组织神经中枢<br><br>
+      <span style="color:var(--dim);">不是聊天记录存档，是组织记忆引擎</span>
+    </p>
+  </div>
+
+</div>
+<div class="nav"><button id="btnPrev" disabled>‹</button><div class="progress-dots" id="progressDots"></div><button id="btnNext">›</button></div>
+<script>
+lucide.createIcons();
+const slides=document.querySelectorAll('.slide'),totalSlides=slides.length;
+let currentIndex=0,isTransitioning=false;
+const pd=document.getElementById('progressDots');
+for(let i=0;i<totalSlides;i++){const d=document.createElement('div');d.className='progress-dot'+(i===0?' active':'');d.addEventListener('click',()=>goToSlide(i));pd.appendChild(d)}
+function ra(s){s.querySelectorAll('.an').forEach(e=>e.classList.remove('visible'))}
+function ta(s){s.querySelectorAll('.an').forEach((e,i)=>{setTimeout(()=>e.classList.add('visible'),i*80)})}
+function goToSlide(i){if(i===currentIndex||i<0||i>=totalSlides||isTransitioning)return;isTransitioning=true;ra(slides[currentIndex]);slides[currentIndex].classList.remove('active');slides[i].classList.add('active');ta(slides[i]);currentIndex=i;document.getElementById('btnPrev').disabled=i===0;document.getElementById('btnNext').disabled=i===totalSlides-1;document.getElementById('pageIndicator').textContent=String(i+1).padStart(2,'0')+' / '+String(totalSlides).padStart(2,'0');document.querySelectorAll('.progress-dot').forEach((d,j)=>d.classList.toggle('active',j===i));setTimeout(()=>isTransitioning=false,600)}
+document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowDown'){e.preventDefault();goToSlide(currentIndex+1)}if(e.key==='ArrowLeft'||e.key==='ArrowUp'){e.preventDefault();goToSlide(currentIndex-1)}})
+let wt;document.addEventListener('wheel',e=>{if(wt)return;wt=setTimeout(()=>wt=null,800);if(e.deltaY>30)goToSlide(currentIndex+1);if(e.deltaY<-30)goToSlide(currentIndex-1)})
+document.getElementById('slides').addEventListener('click',e=>{const r=e.currentTarget.getBoundingClientRect();if(e.clientX-r.left>r.width*.7)goToSlide(currentIndex+1);if(e.clientX-r.left<r.width*.3)goToSlide(currentIndex-1)})
+window.addEventListener('load',()=>{setTimeout(()=>{document.getElementById('loading').classList.add('hidden');ta(slides[0])},2000)})
+document.getElementById('pageIndicator').textContent='01 / '+String(totalSlides).padStart(2,'0')
+</script>
+</body>
+</html>
