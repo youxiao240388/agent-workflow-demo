@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>工作流01 — 发票智能处理</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#020617;--surface:#0f172a;--border:#1e293b;--text:#f1f5f9;--muted:#94a3b8;--dim:#475569;--cyan:#22d3ee;--emerald:#34d399;--violet:#a78bfa;--amber:#fbbf24;--rose:#fb7185;--orange:#fb923c}
+body{font-family:'Noto Sans SC','JetBrains Mono',monospace;background:var(--bg);min-height:100vh;overflow:hidden;color:var(--text)}
+.loading{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1.5rem;transition:opacity .6s,visibility .6s}
+.loading.hidden{opacity:0;visibility:hidden}
+.loading-spinner{width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{color:var(--muted);font-size:.875rem;letter-spacing:.2em}
+.slides{width:100vw;height:100vh;position:relative}
+.slide{position:absolute;inset:0;display:none;padding:2.5rem 4rem;flex-direction:column;justify-content:center;opacity:0;transition:opacity .4s}
+.slide.active{display:flex;opacity:1}
+.cover{align-items:center;text-align:center;gap:1.5rem}
+.pulse-ring{width:60px;height:60px;border-radius:50%;margin-bottom:0;background:radial-gradient(circle,rgba(34,211,238,.2) 0%,transparent 70%);display:flex;align-items:center;justify-content:center;animation:pulse-ring 2s ease-in-out infinite}
+@keyframes pulse-ring{0%,100%{transform:scale(1);opacity:.6}50%{transform:scale(1.15);opacity:1}}
+.pulse-dot{width:16px;height:16px;background:var(--cyan);border-radius:50%;box-shadow:0 0 20px rgba(34,211,238,.5)}
+.cover h1{font-size:2rem;font-weight:900}
+.cover .accent{color:var(--cyan)}
+.cover .tagline{color:var(--muted);font-size:1rem;font-weight:300}
+.cover .meta{color:var(--dim);font-size:.8rem;margin-top:1.5rem}
+.content-slide{gap:1.25rem}
+.section-title{display:flex;align-items:center;gap:.75rem;margin-bottom:.25rem}
+.section-title .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.content-slide h2{font-size:1.4rem;font-weight:700}
+.desc{color:var(--muted);font-size:.9rem;line-height:1.7;max-width:900px}
+.an{opacity:0;transform:translateY(20px)}
+.an.visible{animation:fadeSlideUp .5s ease-out forwards}
+@keyframes fadeSlideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+/* Pipeline */
+.pipeline{display:flex;align-items:center;gap:0;margin:1rem 0;flex-wrap:wrap;justify-content:center}
+.pipe-step{background:var(--surface);border:1px solid var(--border);border-radius:.75rem;padding:1rem 1.25rem;text-align:center;min-width:130px;transition:transform .3s,box-shadow .3s}
+.pipe-step:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(0,0,0,.4)}
+.pipe-step .icon{margin-bottom:.5rem}
+.pipe-step .step-num{color:var(--dim);font-size:.65rem;font-family:'JetBrains Mono',monospace;margin-bottom:.25rem}
+.pipe-step h4{font-size:.85rem;font-weight:600;margin-bottom:.25rem}
+.pipe-step p{color:var(--muted);font-size:.7rem;line-height:1.4}
+.pipe-arrow{color:var(--dim);font-size:1.5rem;margin:0 .25rem;flex-shrink:0}
+@keyframes arrowPulse{0%,100%{opacity:.3}50%{opacity:1}}
+.pipe-arrow.live{animation:arrowPulse 1.5s ease-in-out infinite;color:var(--cyan)}
+
+/* Cards */
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-top:.5rem}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:.75rem;padding:1.25rem;transition:transform .3s,box-shadow .3s}
+.card:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(0,0,0,.4)}
+.card-top{display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem}
+.card h3{font-size:.9rem;font-weight:600}
+.card p,.card li{color:var(--muted);font-size:.8rem;line-height:1.6}
+.card ul{list-style:none}
+.card li::before{content:'› ';color:var(--dim)}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-top:.75rem}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:.75rem;padding:1.25rem;text-align:center}
+.stat-card .number{font-size:1.8rem;font-weight:900}
+.stat-card .label{color:var(--muted);font-size:.75rem;margin-top:.25rem}
+
+/* Nav */
+.nav{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:1rem;z-index:100}
+.nav button{background:var(--surface);border:1px solid var(--border);color:var(--text);width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.nav button:hover{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 12px rgba(34,211,238,.2)}
+.nav button:disabled{opacity:.3;cursor:default}
+.nav button:disabled:hover{border-color:var(--border);color:var(--text);box-shadow:none}
+.progress-dots{display:flex;gap:.4rem}
+.progress-dot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:all .3s;cursor:pointer}
+.progress-dot.active{background:var(--cyan);width:24px;border-radius:4px}
+.progress-dot:hover{background:var(--muted)}
+.page-indicator{position:fixed;top:2rem;right:3rem;z-index:100;color:var(--dim);font-size:.8rem;font-family:'JetBrains Mono',monospace}
+.key-hint{position:fixed;bottom:5.5rem;left:50%;transform:translateX(-50%);z-index:100;color:var(--dim);font-size:.7rem;pointer-events:none;opacity:.6}
+
+@media(max-width:768px){.slide{padding:1.5rem}.pipeline{flex-direction:column}.pipe-arrow{transform:rotate(90deg)}.cards{grid-template-columns:1fr}.stats{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="loading" id="loading"><div class="loading-spinner"></div><div class="loading-text">I N V O I C E &nbsp; E N G I N E</div></div>
+
+<div class="page-indicator" id="pageIndicator">01 / 05</div>
+<div class="key-hint">← → 键 / 滚轮 / 点击切换</div>
+
+<div class="slides" id="slides">
+
+  <!-- P0: Cover -->
+  <div class="slide cover active" data-index="0">
+    <div class="pulse-ring an"><div class="pulse-dot"></div></div>
+    <h1 class="an">工作流<span class="accent">01</span></h1>
+    <p class="tagline an">发票智能处理 · Invoice Intelligence Pipeline</p>
+    <p class="tagline an" style="color:var(--dim)">3-5 分钟 → 约 30 秒 · 格式 100% 合规</p>
+  </div>
+
+  <!-- P1: Pipeline Overview -->
+  <div class="slide content-slide" data-index="1">
+    <div class="section-title an"><div class="dot" style="background:var(--cyan)"></div><h2>处理管线 · 7 步全自动</h2></div>
+    <div class="pipeline" style="margin-top:1rem;">
+      <div class="pipe-step an"><div class="step-num">STEP 1</div><div class="icon"><i data-lucide="upload" style="color:var(--cyan);width:22px;height:22px;"></i></div><h4>文件上传</h4><p>图片/PDF接入</p></div>
+      <div class="pipe-arrow an live">→</div>
+      <div class="pipe-step an"><div class="step-num">STEP 2</div><div class="icon"><i data-lucide="scan-text" style="color:var(--cyan);width:22px;height:22px;"></i></div><h4>格式判别</h4><p>自动识别类型</p></div>
+      <div class="pipe-arrow an">→</div>
+      <div class="pipe-step an"><div class="step-num">STEP 3</div><div class="icon"><i data-lucide="eye" style="color:var(--cyan);width:22px;height:22px;"></i></div><h4>OCR识别</h4><p>rapidocr引擎</p></div>
+      <div class="pipe-arrow an">→</div>
+      <div class="pipe-step an"><div class="step-num">STEP 4</div><div class="icon"><i data-lucide="split" style="color:var(--cyan);width:22px;height:22px;"></i></div><h4>字段提取</h4><p>语义解析</p></div>
+      <div class="pipe-arrow an">→</div>
+      <div class="pipe-step an"><div class="step-num">STEP 5</div><div class="icon"><i data-lucide="tag" style="color:var(--cyan);width:22px;height:22px;"></i></div><h4>类别推断</h4><p>消费类型匹配</p></div>
+      <div class="pipe-arrow an">→</div>
+      <div class="pipe-step an"><div class="step-num">STEP 6</div><div class="icon"><i data-lucide="file-text" style="color:var(--cyan);width:22px;height:22px;"></i></div><h4>命名归档</h4><p>规范文件名</p></div>
+      <div class="pipe-arrow an">→</div>
+      <div class="pipe-step an"><div class="step-num">STEP 7</div><div class="icon"><i data-lucide="send" style="color:var(--cyan);width:22px;height:22px;"></i></div><h4>推送分发</h4><p>飞书PDF返回</p></div>
+    </div>
+  </div>
+
+  <!-- P2: 命名规范 -->
+  <div class="slide content-slide" data-index="2">
+    <div class="section-title an"><div class="dot" style="background:var(--cyan)"></div><h2>命名规范 · 自动匹配</h2></div>
+    <div class="desc an" style="font-family:'JetBrains Mono',monospace;font-size:.95rem;background:var(--surface);padding:1.5rem;border-radius:.75rem;border:1px solid var(--border);">
+      <span style="color:var(--cyan);">购买方名称</span><span style="color:var(--dim);">_</span><span style="color:var(--emerald);">销售方全名</span><span style="color:var(--dim);">_</span><span style="color:var(--violet);">消费类型</span><span style="color:var(--dim);">_</span><span style="color:var(--amber);">金额</span><span style="color:var(--dim);">_</span><span style="color:var(--rose);">发票号</span><span style="color:var(--dim);">.pdf</span>
+    </div>
+    <div class="cards">
+      <div class="card an"><div class="card-top"><i data-lucide="building-2" style="color:var(--cyan);width:18px;height:18px;"></i><h3>购买方</h3></div><p>OCR 提取购买方全名，自动取前两字（去"上海"前缀）</p></div>
+      <div class="card an"><div class="card-top"><i data-lucide="store" style="color:var(--emerald);width:18px;height:18px;"></i><h3>销售方</h3></div><p>提取销售方全名，保留完整商户信息</p></div>
+      <div class="card an"><div class="card-top"><i data-lucide="utensils" style="color:var(--violet);width:18px;height:18px;"></i><h3>消费类型</h3></div><p>根据商户名称 + 金额，LLM 自动推断消费类别</p></div>
+    </div>
+  </div>
+
+  <!-- P3: 技术细节 -->
+  <div class="slide content-slide" data-index="3">
+    <div class="section-title an"><div class="dot" style="background:var(--emerald)"></div><h2>技术细节</h2></div>
+    <div class="cards">
+      <div class="card an"><div class="card-top"><i data-lucide="cpu" style="color:var(--emerald);width:18px;height:18px;"></i><h3>OCR引擎</h3></div><p>rapidocr-onnxruntime 纯Python方案，无需tesseract。零系统依赖，自适应降级。</p></div>
+      <div class="card an"><div class="card-top"><i data-lucide="brain" style="color:var(--emerald);width:18px;height:18px;"></i><h3>字段解析</h3></div><p>发票文字→结构化字段。购买方、销售方、金额、发票号、税率逐字段提取。</p></div>
+      <div class="card an"><div class="card-top"><i data-lucide="shield-check" style="color:var(--emerald);width:18px;height:18px;"></i><h3>数据安全</h3></div><p>金额、个人信息本地脱敏后才入云端推理链路。Pdftotext → rapidocr 双级降级。</p></div>
+    </div>
+    <div class="stats an">
+      <div class="stat-card"><div class="number" style="color:var(--cyan);">~30s</div><div class="label">单张处理时间</div></div>
+      <div class="stat-card"><div class="number" style="color:var(--emerald);">100%</div><div class="label">格式合规率</div></div>
+      <div class="stat-card"><div class="number" style="color:var(--violet);">7步</div><div class="label">全链路自动化</div></div>
+    </div>
+  </div>
+
+  <!-- P4: 效果对比 -->
+  <div class="slide cover" data-index="4">
+    <div class="pulse-ring an"><div class="pulse-dot" style="background:var(--emerald);box-shadow:0 0 20px rgba(52,211,153,.5);"></div></div>
+    <h1 class="an" style="font-size:1.8rem;">效果<span style="color:var(--emerald);">验证</span></h1>
+    <div class="desc an" style="max-width:700px;text-align:center;">
+      <strong style="color:var(--rose);">人工处理</strong>：3-5 分钟/张，格式靠人工校对，易出错<br><br>
+      <strong style="color:var(--emerald);">系统处理</strong>：约 30 秒/张，格式 100% 合规，零人工介入<br><br>
+      <span style="color:var(--dim);">效率提升 6-10 倍，错误率归零</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="nav">
+  <button id="btnPrev" disabled>‹</button>
+  <div class="progress-dots" id="progressDots"></div>
+  <button id="btnNext">›</button>
+</div>
+
+<script>
+lucide.createIcons();
+const slides=document.querySelectorAll('.slide');
+const totalSlides=slides.length;
+let currentIndex=0,isTransitioning=false;
+const progressDots=document.getElementById('progressDots');
+for(let i=0;i<totalSlides;i++){const dot=document.createElement('div');dot.className='progress-dot'+(i===0?' active':'');dot.addEventListener('click',()=>goToSlide(i));progressDots.appendChild(dot)}
+function resetAnimations(slide){slide.querySelectorAll('.an').forEach(el=>el.classList.remove('visible'))}
+function triggerAnimations(slide){slide.querySelectorAll('.an').forEach((el,i)=>{setTimeout(()=>el.classList.add('visible'),i*80)})}
+function goToSlide(index){if(index===currentIndex||index<0||index>=totalSlides||isTransitioning)return;isTransitioning=true;const prev=slides[currentIndex],next=slides[index];prev.classList.remove('active');resetAnimations(prev);next.classList.add('active');triggerAnimations(next);currentIndex=index;document.getElementById('btnPrev').disabled=index===0;document.getElementById('btnNext').disabled=index===totalSlides-1;document.getElementById('pageIndicator').textContent=String(index+1).padStart(2,'0')+' / '+String(totalSlides).padStart(2,'0');document.querySelectorAll('.progress-dot').forEach((d,i)=>d.classList.toggle('active',i===index));setTimeout(()=>isTransitioning=false,600)}
+document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowDown'){e.preventDefault();goToSlide(currentIndex+1)}if(e.key==='ArrowLeft'||e.key==='ArrowUp'){e.preventDefault();goToSlide(currentIndex-1)}})
+let wheelTimeout;document.addEventListener('wheel',e=>{if(wheelTimeout)return;wheelTimeout=setTimeout(()=>wheelTimeout=null,800);if(e.deltaY>30)goToSlide(currentIndex+1);if(e.deltaY<-30)goToSlide(currentIndex-1)})
+document.getElementById('slides').addEventListener('click',e=>{const rect=e.currentTarget.getBoundingClientRect();if(e.clientX-rect.left>rect.width*.7)goToSlide(currentIndex+1);if(e.clientX-rect.left<rect.width*.3)goToSlide(currentIndex-1)})
+window.addEventListener('load',()=>{setTimeout(()=>{document.getElementById('loading').classList.add('hidden');triggerAnimations(slides[0])},2000)})
+document.getElementById('pageIndicator').textContent='01 / '+String(totalSlides).padStart(2,'0')
+</script>
+</body>
+</html>
