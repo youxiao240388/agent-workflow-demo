@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>工作流02 — 网页知识提取</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#020617;--surface:#0f172a;--border:#1e293b;--text:#f1f5f9;--muted:#94a3b8;--dim:#475569;--cyan:#22d3ee;--emerald:#34d399;--violet:#a78bfa;--amber:#fbbf24;--rose:#fb7185;--orange:#fb923c}
+body{font-family:'Noto Sans SC','JetBrains Mono',monospace;background:var(--bg);min-height:100vh;overflow:hidden;color:var(--text)}
+.loading{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1.5rem;transition:opacity .6s,visibility .6s}
+.loading.hidden{opacity:0;visibility:hidden}
+.loading-spinner{width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--emerald);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{color:var(--muted);font-size:.875rem;letter-spacing:.2em}
+.slides{width:100vw;height:100vh;position:relative}
+.slide{position:absolute;inset:0;display:none;padding:2.5rem 4rem;flex-direction:column;justify-content:center;opacity:0;transition:opacity .4s}
+.slide.active{display:flex;opacity:1}
+.cover{align-items:center;text-align:center;gap:1.5rem}
+.pulse-ring{width:60px;height:60px;border-radius:50%;background:radial-gradient(circle,rgba(52,211,153,.2) 0%,transparent 70%);display:flex;align-items:center;justify-content:center;animation:pulse-ring 2s ease-in-out infinite}
+@keyframes pulse-ring{0%,100%{transform:scale(1);opacity:.6}50%{transform:scale(1.15);opacity:1}}
+.pulse-dot{width:16px;height:16px;background:var(--emerald);border-radius:50%;box-shadow:0 0 20px rgba(52,211,153,.5)}
+.cover h1{font-size:2rem;font-weight:900}
+.cover .accent{color:var(--emerald)}
+.cover .tagline{color:var(--muted);font-size:1rem;font-weight:300}
+.content-slide{gap:1.25rem}
+.section-title{display:flex;align-items:center;gap:.75rem;margin-bottom:.25rem}
+.section-title .dot{width:10px;height:10px;border-radius:50%}
+.content-slide h2{font-size:1.4rem;font-weight:700}
+.desc{color:var(--muted);font-size:.9rem;line-height:1.7;max-width:900px}
+.an{opacity:0;transform:translateY(20px)}
+.an.visible{animation:fadeSlideUp .5s ease-out forwards}
+@keyframes fadeSlideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.pipeline{display:flex;align-items:center;gap:0;margin:1rem 0;flex-wrap:wrap;justify-content:center}
+.pipe-step{background:var(--surface);border:1px solid var(--border);border-radius:.75rem;padding:1rem 1.25rem;text-align:center;min-width:120px;transition:transform .3s,box-shadow .3s}
+.pipe-step:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(0,0,0,.4)}
+.pipe-step .step-num{color:var(--dim);font-size:.65rem;font-family:'JetBrains Mono',monospace;margin-bottom:.25rem}
+.pipe-step h4{font-size:.85rem;font-weight:600;margin-bottom:.25rem}
+.pipe-step p{color:var(--muted);font-size:.7rem;line-height:1.4}
+.pipe-arrow{color:var(--dim);font-size:1.5rem;margin:0 .25rem}
+@keyframes arrowPulse{0%,100%{opacity:.3}50%{opacity:1}}
+.pipe-arrow.live{animation:arrowPulse 1.5s ease-in-out infinite;color:var(--emerald)}
+.cards{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;margin-top:.5rem}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:.75rem;padding:1.25rem;transition:transform .3s,box-shadow .3s}
+.card:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(0,0,0,.4)}
+.card-top{display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem}
+.card h3{font-size:.9rem;font-weight:600}
+.card p,.card li{color:var(--muted);font-size:.8rem;line-height:1.6}
+.card ul{list-style:none}
+.card li::before{content:'› ';color:var(--dim)}
+/* OOXML highlight */
+.ooxml-box{background:var(--surface);border:1px solid var(--border);border-radius:.75rem;padding:1.5rem;margin-top:.5rem}
+.ooxml-box .label{color:var(--emerald);font-weight:600;font-size:.85rem;margin-bottom:.5rem}
+.ooxml-box .text{color:var(--muted);font-size:.85rem;line-height:1.7}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-top:.75rem}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:.75rem;padding:1.25rem;text-align:center}
+.stat-card .number{font-size:1.8rem;font-weight:900}
+.stat-card .label{color:var(--muted);font-size:.75rem;margin-top:.25rem}
+.nav{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:1rem;z-index:100}
+.nav button{background:var(--surface);border:1px solid var(--border);color:var(--text);width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.nav button:hover{border-color:var(--emerald);color:var(--emerald);box-shadow:0 0 12px rgba(52,211,153,.2)}
+.nav button:disabled{opacity:.3;cursor:default}
+.nav button:disabled:hover{border-color:var(--border);color:var(--text);box-shadow:none}
+.progress-dots{display:flex;gap:.4rem}
+.progress-dot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:all .3s;cursor:pointer}
+.progress-dot.active{background:var(--emerald);width:24px;border-radius:4px}
+.page-indicator{position:fixed;top:2rem;right:3rem;z-index:100;color:var(--dim);font-size:.8rem;font-family:'JetBrains Mono',monospace}
+.key-hint{position:fixed;bottom:5.5rem;left:50%;transform:translateX(-50%);z-index:100;color:var(--dim);font-size:.7rem;pointer-events:none;opacity:.6}
+@media(max-width:768px){.slide{padding:1.5rem}.pipeline{flex-direction:column}.pipe-arrow{transform:rotate(90deg)}.cards{grid-template-columns:1fr}.stats{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="loading" id="loading"><div class="loading-spinner"></div><div class="loading-text">W E B &nbsp; E X T R A C T O R</div></div>
+<div class="page-indicator" id="pageIndicator">01 / 05</div>
+<div class="key-hint">← → 键 / 滚轮 / 点击切换</div>
+<div class="slides" id="slides">
+
+  <div class="slide cover active" data-index="0">
+    <div class="pulse-ring an"><div class="pulse-dot"></div></div>
+    <h1 class="an">工作流<span class="accent">02</span></h1>
+    <p class="tagline an">网页知识提取 · Web-to-Document Pipeline</p>
+    <p class="tagline an" style="color:var(--dim)">任意网页 → 标准化 Word 文档 · 格式零返工</p>
+  </div>
+
+  <div class="slide content-slide" data-index="1">
+    <div class="section-title an"><div class="dot" style="background:var(--emerald)"></div><h2>处理管线</h2></div>
+    <div class="pipeline" style="margin-top:1rem;">
+      <div class="pipe-step an"><div class="step-num">STEP 1</div><div class="icon"><i data-lucide="link" style="color:var(--emerald);width:22px;height:22px;"></i></div><h4>URL接入</h4><p>网页链接/文章</p></div>
+      <div class="pipe-arrow an live">→</div>
+      <div class="pipe-step an"><div class="step-num">STEP 2</div><div class="icon"><i data-lucide="download" style="color:var(--emerald);width:22px;height:22px;"></i></div><h4>内容抓取</h4><p>JS渲染页面</p></div>
+      <div class="pipe-arrow an">→</div>
+      <div class="pipe-step an"><div class="step-num">STEP 3</div><div class="icon"><i data-lucide="layers" style="color:var(--emerald);width:22px;height:22px;"></i></div><h4>结构提取</h4><p>DOM解析</p></div>
+      <div class="pipe-arrow an">→</div>
+      <div class="pipe-step an"><div class="step-num">STEP 4</div><div class="icon"><i data-lucide="shuffle" style="color:var(--emerald);width:22px;height:22px;"></i></div><h4>OOXML转换</h4><p>保真引擎</p></div>
+      <div class="pipe-arrow an">→</div>
+      <div class="pipe-step an"><div class="step-num">STEP 5</div><div class="icon"><i data-lucide="file-text" style="color:var(--emerald);width:22px;height:22px;"></i></div><h4>格式校验</h4><p>编号+排版</p></div>
+      <div class="pipe-arrow an">→</div>
+      <div class="pipe-step an"><div class="step-num">STEP 6</div><div class="icon"><i data-lucide="check-circle" style="color:var(--emerald);width:22px;height:22px;"></i></div><h4>导出docx</h4><p>标准化文档</p></div>
+    </div>
+  </div>
+
+  <div class="slide content-slide" data-index="2">
+    <div class="section-title an"><div class="dot" style="background:var(--emerald)"></div><h2>OOXML 文档结构保真引擎</h2></div>
+    <p class="desc an">核心难点不是提不到文本，而是结构丢失——有序列表编号串号、字号层级混乱、嵌套内容重复。</p>
+    <div class="ooxml-box an">
+      <div class="label">🔧 解决方案：独立编号注册机制</div>
+      <div class="text">
+        逆向 OOXML 的 <code style="color:var(--cyan);">numbering.xml</code> 规范，<br>
+        为每个列表段分配<strong style="color:var(--emerald);">独立编号上下文（numId）</strong>，<br>
+        确保有序/无序列表互不干扰，编号永不串号。
+      </div>
+    </div>
+    <div class="cards">
+      <div class="card an"><div class="card-top"><i data-lucide="file-code" style="color:var(--emerald);width:18px;height:18px;"></i><h3>Numbering.xml 逆向</h3></div><p>深入 OOXML 编号规范，独立注册每个列表段，杜绝编号串号。</p></div>
+      <div class="card an"><div class="card-top"><i data-lucide="type" style="color:var(--emerald);width:18px;height:18px;"></i><h3>样式保真</h3></div><p>微软雅黑全篇、首行缩进两字符、h1-h3 层级分明，100% 还原排版意图。</p></div>
+    </div>
+  </div>
+
+  <div class="slide content-slide" data-index="3">
+    <div class="section-title an"><div class="dot" style="background:var(--violet)"></div><h2>适用场景</h2></div>
+    <div class="cards">
+      <div class="card an"><div class="card-top"><i data-lucide="book-open" style="color:var(--violet);width:18px;height:18px;"></i><h3>技术文档归档</h3></div><p>Synology知识库、华为华三技术手册等JS渲染平台，一键转为本地docx。</p></div>
+      <div class="card an"><div class="card-top"><i data-lucide="newspaper" style="color:var(--violet);width:18px;height:18px;"></i><h3>网页文章保存</h3></div><p>SPA页面、动态加载内容的完整抓取，保留图片、表格、列表结构。</p></div>
+      <div class="card an"><div class="card-top"><i data-lucide="graduation-cap" style="color:var(--violet);width:18px;height:18px;"></i><h3>学习资料整理</h3></div><p>在线教程、博客文章批量转档，统一格式入库，方便全文检索。</p></div>
+      <div class="card an"><div class="card-top"><i data-lucide="building" style="color:var(--violet);width:18px;height:18px;"></i><h3>企业内部知识库</h3></div><p>将分散在各平台的文档统一转化为标准化格式，纳入组织知识体系。</p></div>
+    </div>
+  </div>
+
+  <div class="slide cover" data-index="4">
+    <div class="pulse-ring an"><div class="pulse-dot" style="background:var(--emerald);box-shadow:0 0 20px rgba(52,211,153,.5);"></div></div>
+    <h1 class="an" style="font-size:1.8rem;">效果<span style="color:var(--emerald);">验证</span></h1>
+    <div class="desc an" style="max-width:700px;text-align:center;">
+      <strong style="color:var(--rose);">复制粘贴</strong>：排版混乱、图片丢失、表格错位、需人工重排<br><br>
+      <strong style="color:var(--emerald);">系统处理</strong>：一键转标准文档，格式 100% 保真，零返工<br><br>
+      <span style="color:var(--dim);">不是针对某个网站打的补丁，是通用引擎</span>
+    </div>
+  </div>
+
+</div>
+<div class="nav"><button id="btnPrev" disabled>‹</button><div class="progress-dots" id="progressDots"></div><button id="btnNext">›</button></div>
+<script>
+lucide.createIcons();
+const slides=document.querySelectorAll('.slide'),totalSlides=slides.length;
+let currentIndex=0,isTransitioning=false;
+const pd=document.getElementById('progressDots');
+for(let i=0;i<totalSlides;i++){const d=document.createElement('div');d.className='progress-dot'+(i===0?' active':'');d.addEventListener('click',()=>goToSlide(i));pd.appendChild(d)}
+function ra(s){s.querySelectorAll('.an').forEach(e=>e.classList.remove('visible'))}
+function ta(s){s.querySelectorAll('.an').forEach((e,i)=>{setTimeout(()=>e.classList.add('visible'),i*80)})}
+function goToSlide(i){if(i===currentIndex||i<0||i>=totalSlides||isTransitioning)return;isTransitioning=true;ra(slides[currentIndex]);slides[currentIndex].classList.remove('active');slides[i].classList.add('active');ta(slides[i]);currentIndex=i;document.getElementById('btnPrev').disabled=i===0;document.getElementById('btnNext').disabled=i===totalSlides-1;document.getElementById('pageIndicator').textContent=String(i+1).padStart(2,'0')+' / '+String(totalSlides).padStart(2,'0');document.querySelectorAll('.progress-dot').forEach((d,j)=>d.classList.toggle('active',j===i));setTimeout(()=>isTransitioning=false,600)}
+document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowDown'){e.preventDefault();goToSlide(currentIndex+1)}if(e.key==='ArrowLeft'||e.key==='ArrowUp'){e.preventDefault();goToSlide(currentIndex-1)}})
+let wt;document.addEventListener('wheel',e=>{if(wt)return;wt=setTimeout(()=>wt=null,800);if(e.deltaY>30)goToSlide(currentIndex+1);if(e.deltaY<-30)goToSlide(currentIndex-1)})
+document.getElementById('slides').addEventListener('click',e=>{const r=e.currentTarget.getBoundingClientRect();if(e.clientX-r.left>r.width*.7)goToSlide(currentIndex+1);if(e.clientX-r.left<r.width*.3)goToSlide(currentIndex-1)})
+window.addEventListener('load',()=>{setTimeout(()=>{document.getElementById('loading').classList.add('hidden');ta(slides[0])},2000)})
+document.getElementById('pageIndicator').textContent='01 / '+String(totalSlides).padStart(2,'0')
+</script>
+</body>
+</html>
