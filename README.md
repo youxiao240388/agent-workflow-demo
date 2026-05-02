@@ -3,8 +3,8 @@
 > 🧠 Hermes Agent Skill · 四层闭环架构 · 一键安装调用
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Hermes Agent](https://img.shields.io/badge/Hermes-Skill-green)](https://github.com/youxiao240388/agent-workflow-demo)
-[![HTML5 Demo](https://img.shields.io/badge/HTML5-Demo-orange)](https://youxiao240388.github.io/agent-workflow-demo/)
+[![Hermes Agent](https://img.shields.io/badge/Hermes-Skill-green)](https://github.com/youxiao240388/agent-workflow)
+[![HTML5 Demo](https://img.shields.io/badge/HTML5-Demo-orange)](https://youxiao240388.github.io/agent-workflow/)
 
 ---
 
@@ -34,7 +34,7 @@
 
 ```bash
 # 1. 克隆仓库
-git clone https://github.com/youxiao240388/agent-workflow-demo.git \
+git clone https://github.com/youxiao240388/agent-workflow.git \
   ~/.hermes/skills/productivity/multi-agent-automation
 
 # 2. 安装 Python 依赖
@@ -69,17 +69,17 @@ cp -r ~/.hermes/skills/productivity/multi-agent-automation/config/skills/web-art
 
 | 演示 | 说明 |
 |------|------|
-| 🏗 [架构总览](https://youxiao240388.github.io/agent-workflow-demo/assets/demos/index.html) | 10 页 PPT，四层闭环架构全览 |
-| 🧾 [发票处理](https://youxiao240388.github.io/agent-workflow-demo/assets/demos/workflow_01.html) | 3-5分钟→30秒，格式100%合规 |
-| 🌐 [网页提取](https://youxiao240388.github.io/agent-workflow-demo/assets/demos/workflow_02.html) | OOXML保真引擎，零返工 |
-| 💬 [知识蒸馏](https://youxiao240388.github.io/agent-workflow-demo/assets/demos/workflow_03.html) | 用后即焚→组织神经中枢 |
+| 🏗 [架构总览](https://youxiao240388.github.io/agent-workflow/assets/demos/index.html) | 10 页 PPT，四层闭环架构全览 |
+| 🧾 [发票处理](https://youxiao240388.github.io/agent-workflow/assets/demos/workflow_01.html) | 3-5分钟→30秒，格式100%合规 |
+| 🌐 [网页提取](https://youxiao240388.github.io/agent-workflow/assets/demos/workflow_02.html) | OOXML保真引擎，零返工 |
+| 💬 [知识蒸馏](https://youxiao240388.github.io/agent-workflow/assets/demos/workflow_03.html) | 用后即焚→组织神经中枢 |
 
 ---
 
 ## 📂 目录结构
 
 ```
-agent-workflow-demo/
+agent-workflow/
 ├── SKILL.md                     # Skill 定义（触发条件、工作流、配置）
 ├── README.md                    # 项目说明（本文件）
 ├── LICENSE                      # MIT
